@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Распредели признаки: Однодольные vs Двудольные</title>
+  <style>
+    :root{
+      --bg:#0f172a;          /* slate-900 */
+      --card:#111827;        /* gray-900 */
+      --muted:#64748b;       /* slate-500 */
+      --text:#e5e7eb;        /* gray-200 */
+      --accent:#22c55e;      /* green-500 */
+      --accent-2:#3b82f6;    /* blue-500 */
+      --wrong:#ef4444;       /* red-500 */
+      --border:#1f2937;      /* gray-800 */
+      --drop:#0ea5e9;        /* sky-500 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 80% -10%, #1e293b 0%, var(--bg) 60%);
+      color:var(--text);
+      display:flex; flex-direction:column; gap:16px;
+    }
+    header{
+      padding:20px 16px 0; text-align:center;
+    }
+    h1{margin:0 0 6px; font-size:clamp(20px,3.8vw,36px); letter-spacing:.3px}
+    .subtitle{color:var(--muted); font-size:clamp(12px,2.2vw,16px)}
+
+    .toolbar{
+      display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:4px 16px 0;
+    }
+    button{
+      background:#0b1220; border:1px solid var(--border); color:var(--text);
+      padding:10px 14px; border-radius:14px; cursor:pointer; font-weight:600; letter-spacing:.2px;
+      box-shadow:0 0 0 1px rgba(255,255,255,.02) inset, 0 6px 20px rgba(0,0,0,.25);
+      transition:transform .08s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    button:hover{transform:translateY(-1px); border-color:#334155}
+    button:active{transform:translateY(0)}
+    .ghost{opacity:.6}
+
+    .wrap{width:100%; max-width:1100px; margin:0 auto; padding:8px 16px 24px; display:grid; gap:16px}
+    .stats{
+      display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap;
+      color:var(--muted); font-size:14px;
+    }
+    .pill{background:#0b1220; border:1px solid var(--border); padding:6px 10px; border-radius:999px}
+
+    .board{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+    @media (max-width:900px){.board{grid-template-columns:1fr}}
+
+    .col{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+      border:1px dashed #334155; border-radius:18px; padding:14px; min-height:240px;
+      display:flex; flex-direction:column; gap:12px; transition:border-color .2s ease, background .2s ease;
+    }
+    .col.dragover{border-color:var(--drop); box-shadow:inset 0 0 0 2px rgba(14,165,233,.25)}
+
+    .col h2{margin:0; font-size:18px; letter-spacing:.3px}
+    .hint{color:var(--muted); font-size:12px}
+
+    .deck{
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;
+    }
+
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid var(--border); border-radius:16px; padding:12px; cursor:grab;
+      user-select:none; box-shadow:0 10px 30px rgba(0,0,0,.22);
+      transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .card:active{cursor:grabbing}
+    .card:hover{transform:translateY(-2px); border-color:#334155}
+    .card.small{font-size:14px}
+    .badge{display:inline-block; font-size:10px; letter-spacing:.4px; text-transform:uppercase; color:#94a3b8; border:1px solid #22314a; padding:3px 6px; border-radius:999px; margin-top:6px}
+
+    .correct{border-color:rgba(34,197,94,.6)!important; background:linear-gradient(180deg, rgba(34,197,94,.12), rgba(34,197,94,.05)); box-shadow:0 0 0 2px rgba(34,197,94,.2) inset}
+    .wrong{border-color:rgba(239,68,68,.7)!important; background:linear-gradient(180deg, rgba(239,68,68,.12), rgba(239,68,68,.05))}
+    .shake{animation:shake .25s linear}
+    @keyframes shake{25%{transform:translateX(-3px)} 50%{transform:translateX(3px)} 75%{transform:translateX(-2px)}}
+
+    footer{padding:10px 16px 24px; text-align:center; color:var(--muted); font-size:12px}
+    a{color:var(--accent-2); text-decoration:none}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Распредели признаки: <span style="color:var(--accent-2)">однодольные</span> vs <span style="color:var(--accent)">двудольные</span></h1>
+    <div class="subtitle">Перетаскивай карточки с признаками в правильный столбец. Подойдёт для экспресс‑закрепления темы «Класс Однодольные и Двудольные».</div>
+  </header>
+
+  <div class="toolbar">
+    <button id="btn-new">Новый раунд</button>
+    <button id="btn-check">Проверить всё</button>
+    <button id="btn-show" title="Показать правильные колонки">Показать ответы</button>
+    <button id="btn-reset" class="ghost">Сбросить расположение</button>
+  </div>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="pill">Всего карточек: <b id="total">–</b></div>
+      <div class="pill">Верно: <b id="score">0</b></div>
+      <div class="pill">Ошибки: <b id="mistakes">0</b></div>
+      <div class="pill">Осталось: <b id="left">–</b></div>
+    </div>
+
+    <section class="board" aria-label="Игровое поле">
+      <div class="col" id="mono" data-accept="mono" aria-label="Однодольные" tabindex="0">
+        <h2>Однодольные</h2>
+        <div class="hint">напр. 1 семядоля, параллельное жилкование, корни мочковатые…</div>
+        <div class="deck" id="deck-mono" aria-live="polite"></div>
+      </div>
+      <div class="col" id="di" data-accept="di" aria-label="Двудольные" tabindex="0">
+        <h2>Двудольные</h2>
+        <div class="hint">напр. 2 семядоли, сетчатое жилкование, корень стержневой…</div>
+        <div class="deck" id="deck-di" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section>
+      <h3 style="margin:18px 0 8px; font-size:18px">Карточки</h3>
+      <div class="deck" id="tray" aria-label="Лоток с карточками"></div>
+    </section>
+  </div>
+
+  <footer>
+    Советы учителю: используйте как блиц-разминку (2–4 минуты), либо как конкурс между группами. Подсказка‑бейдж подсказывает блок темы (семядоли, жилкование, проводящие пучки, корневая система, цветок, пыльца, рост).
+  </footer>
+
+  <script>
+    const ALL_CARDS = [
+      // Категория, текст, бейдж (подтема)
+      {cat:'mono', text:'1 семядоля в семени', tag:'семядоли'},
+      {cat:'di',   text:'2 семядоли в семени', tag:'семядоли'},
+
+      {cat:'mono', text:'Жилкование листа параллельное или дуговое', tag:'жилкование'},
+      {cat:'di',   text:'Жилкование листа сетчатое (перистое/пальчатое)', tag:'жилкование'},
+
+      {cat:'mono', text:'Проводящие пучки в стебле рассеяны', tag:'анатомия стебля'},
+      {cat:'di',   text:'Проводящие пучки в стебле кольцом', tag:'анатомия стебля'},
+
+      {cat:'mono', text:'Корневая система мочковатая (придаточные корни)', tag:'корни'},
+      {cat:'di',   text:'Корневая система стержневая', tag:'корни'},
+
+      {cat:'mono', text:'Число частей цветка кратно 3', tag:'цветок'},
+      {cat:'di',   text:'Части цветка по 4 или 5 (или кратны 4/5)', tag:'цветок'},
+
+      {cat:'mono', text:'Пыльца чаще с одной бороздой (моносулькатная)', tag:'пыльца'},
+      {cat:'di',   text:'Пыльца часто с тремя бороздами (триколпатная)', tag:'пыльца'},
+
+      {cat:'mono', text:'Вторичный рост по камбию обычно отсутствует', tag:'рост'},
+      {cat:'di',   text:'Часто выражен вторичный рост (камбий формирует древесину)', tag:'рост'},
+
+      // Примеры (по желанию можно отключать, оставлены как «признаки по примерам»)
+      {cat:'mono', text:'Примеры: злаки (пшеница, рис), лилии, кукуруза', tag:'примеры'},
+      {cat:'di',   text:'Примеры: фасоль, яблоня, подсолнечник, розы', tag:'примеры'},
+    ];
+
+    const DOM = {
+      tray: document.getElementById('tray'),
+      deckMono: document.getElementById('deck-mono'),
+      deckDi: document.getElementById('deck-di'),
+      monoCol: document.getElementById('mono'),
+      diCol: document.getElementById('di'),
+      score: document.getElementById('score'),
+      mistakes: document.getElementById('mistakes'),
+      left: document.getElementById('left'),
+      total: document.getElementById('total'),
+      btnNew: document.getElementById('btn-new'),
+      btnCheck: document.getElementById('btn-check'),
+      btnShow: document.getElementById('btn-show'),
+      btnReset: document.getElementById('btn-reset'),
+    };
+
+    let state = {cards: [], score:0, mistakes:0};
+
+    function sampleRound(){
+      // Берём 10–12 случайных карточек, чтобы раунды отличались
+      const pool = [...ALL_CARDS];
+      for (let i=pool.length-1; i>0; i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+      const n = Math.min(12, Math.max(10, Math.floor(Math.random()*3)+10));
+      return pool.slice(0, n);
+    }
+
+    function render(){
+      DOM.tray.innerHTML = '';
+      DOM.deckMono.innerHTML = '';
+      DOM.deckDi.innerHTML = '';
+
+      state.cards.forEach((c, idx)=>{
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.draggable = true;
+        el.textContent = c.text;
+        el.dataset.cat = c.cat;
+        el.dataset.index = idx;
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = c.tag;
+        el.appendChild(document.createElement('br'));
+        el.appendChild(badge);
+        addDragHandlers(el);
+        DOM.tray.appendChild(el);
+      });
+
+      updateStats();
+    }
+
+    function updateStats(){
+      const total = state.cards.length;
+      const placed = document.querySelectorAll('.deck .card.locked').length;
+      DOM.total.textContent = total;
+      DOM.score.textContent = state.score;
+      DOM.mistakes.textContent = state.mistakes;
+      DOM.left.textContent = total - placed;
+    }
+
+    function addDragHandlers(el){
+      el.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/plain', el.dataset.index);
+        setTimeout(()=> el.classList.add('ghost'), 0);
+      });
+      el.addEventListener('dragend', ()=>{
+        el.classList.remove('ghost');
+      });
+    }
+
+    function colHandlers(col){
+      col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('dragover'); });
+      col.addEventListener('dragleave', ()=> col.classList.remove('dragover'));
+      col.addEventListener('drop', e=>{
+        e.preventDefault();
+        col.classList.remove('dragover');
+        const idx = e.dataTransfer.getData('text/plain');
+        const card = state.cards[idx];
+        const correct = col.dataset.accept === card.cat;
+        // найдём реальный элемент по index
+        const el = document.querySelector(`.card[data-index="${idx}"]`);
+        if(!el) return;
+        if(correct){
+          el.classList.add('correct','locked');
+          el.draggable = false;
+          (col.querySelector('.deck')||col).appendChild(el);
+          state.score++;
+        }else{
+          el.classList.add('wrong','shake');
+          setTimeout(()=> el.classList.remove('shake'), 280);
+          state.mistakes++;
+        }
+        updateStats();
+        checkWin();
+      });
+    }
+
+    function keyboardDropSupport(){
+      // Простая клавиатурная альтернатива: Enter кидает выделенную карточку в подсвеченную колонку
+      document.addEventListener('keydown', e=>{
+        const focusedCol = document.activeElement?.classList?.contains('col') ? document.activeElement : null;
+        if(!focusedCol) return;
+        if(e.key === 'Enter'){
+          const movable = DOM.tray.querySelector('.card');
+          if(movable){
+            // симулируем перенос первой карточки
+            const idx = movable.dataset.index;
+            const fakeEvent = { preventDefault(){}, dataTransfer:{ getData(){return idx;} } };
+            focusedCol.dispatchEvent(new Event('drop')); // visual
+          }
+        }
+      });
+    }
+
+    function checkAll(){
+      // Автопроверка всех карточек из лотка: верные — распределяются, неверные — помечаются
+      const list = [...DOM.tray.querySelectorAll('.card')];
+      list.forEach(el=>{
+        const idx = el.dataset.index;
+        const cat = state.cards[idx].cat;
+        const targetCol = (cat==='mono') ? DOM.monoCol : DOM.diCol;
+        targetCol.querySelector('.deck').appendChild(el);
+        el.classList.add('correct','locked');
+        el.draggable = false;
+        state.score++;
+      });
+      updateStats();
+      checkWin();
+    }
+
+    function showAnswers(){
+      // Подсветить области, куда что должно попасть (на 1.5 секунды)
+      DOM.monoCol.classList.add('dragover');
+      DOM.diCol.classList.add('dragover');
+      setTimeout(()=>{ DOM.monoCol.classList.remove('dragover'); DOM.diCol.classList.remove('dragover'); }, 1500);
+    }
+
+    function resetPositions(){
+      // Вернуть все незакреплённые карточки в лоток; ошибки/верные стили убрать
+      [...document.querySelectorAll('.card')].forEach(el=>{
+        el.classList.remove('correct','wrong');
+        if(!el.classList.contains('locked')) DOM.tray.appendChild(el);
+      });
+      state.score = document.querySelectorAll('.card.locked').length; // оставляем уже верные
+      updateStats();
+    }
+
+    function newRound(){
+      state = {cards: sampleRound(), score:0, mistakes:0};
+      render();
+    }
+
+    function checkWin(){
+      const total = state.cards.length;
+      const placed = document.querySelectorAll('.deck .card.locked').length;
+      if(placed === total){
+        const msg = `Готово! Верных: ${state.score}/${total}. Ошибок: ${state.mistakes}.`;
+        toast(msg);
+      }
+    }
+
+    function toast(msg){
+      let t = document.getElementById('toast');
+      if(!t){
+        t = document.createElement('div');
+        t.id = 'toast';
+        t.style.position='fixed'; t.style.bottom='22px'; t.style.left='50%'; t.style.transform='translateX(-50%)';
+        t.style.background='#0b1220'; t.style.border='1px solid var(--border)'; t.style.padding='10px 14px';
+        t.style.borderRadius='12px'; t.style.boxShadow='0 10px 30px rgba(0,0,0,.3)'; t.style.zIndex='99';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg; t.style.opacity='1';
+      clearTimeout(t._id); t._id = setTimeout(()=>{ t.style.opacity='0'; }, 2400);
+    }
+
+    // Init
+    ;[DOM.monoCol, DOM.diCol].forEach(colHandlers);
+    keyboardDropSupport();
+    DOM.btnNew.addEventListener('click', newRound);
+    DOM.btnCheck.addEventListener('click', checkAll);
+    DOM.btnShow.addEventListener('click', showAnswers);
+    DOM.btnReset.addEventListener('click', resetPositions);
+
+    newRound();
+  </script>
+</body>
+</html>
